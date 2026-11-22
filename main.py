@@ -1,25 +1,48 @@
-"""Copy the pre-rendered news image to the grader output directory.
+"""Copier entrypoint for news-image-20261121 (v5-fix3).
 
-The entry image (entry.png, 1024x1024) is drawn at build time and ships
-with this repository. This program's only job is to place it where the
-grader expects it: $MAKEFUN_OUTPUT_DIR/entry.png (default /output).
-Standard library only.
+Menyalin entry.png yang berada di direktori yang sama dengan script ini
+ke direktori output yang ditunjuk variabel lingkungan
+MAKEFUN_OUTPUT_DIR (default "/output") sebagai entry.png.
+
+Hanya memakai pustaka standar Python. Tidak ada keacakan, tidak ada
+tulis ke path relatif: tujuan selalu dibangun dari MAKEFUN_OUTPUT_DIR.
 """
 
 import os
 import shutil
+import sys
+
+
+def _script_dir():
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _output_dir():
+    return os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
 
 
 def main():
-    here = os.path.dirname(os.path.abspath(__file__))
-    src = os.path.join(here, "entry.png")
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    source = os.path.join(_script_dir(), "entry.png")
+    out_dir = _output_dir()
+    target = os.path.join(out_dir, "entry.png")
+
+    if not os.path.isfile(source):
+        print("source entry.png tidak ditemukan: %s" % source,
+              file=sys.stderr)
+        return 1
+
+    # Umask longgar supaya file hasil salinan bisa dibaca siapa pun,
+    # lalu pastikan direktorinya ada.
+    os.umask(0o022)
     os.makedirs(out_dir, exist_ok=True)
-    dst = os.path.join(out_dir, "entry.png")
-    shutil.copyfile(src, dst)
-    os.chmod(dst, 0o644)
-    print("wrote", dst, os.path.getsize(dst), "bytes")
+
+    shutil.copyfile(source, target)
+    # World-readable, sesuai aturan output make.fun (0644).
+    os.chmod(target, 0o644)
+
+    print("disalin: %s -> %s" % (source, target))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
